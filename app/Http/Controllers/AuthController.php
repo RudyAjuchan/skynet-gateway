@@ -4,33 +4,40 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
+use App\Models\Usuario;
 
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $user = User::where('correo', $request->correo)->first();
+        $request->validate([
+            'correo' => 'required|email',
+            'password' => 'required',
+        ]);
 
-        if (!$user || !Hash::check($request->contraseña, $request->contraseña)) {
+        $user = Usuario::where('correo', $request->correo)->first();
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
-        return [
-            'token' => $user->createToken('auth_token')->plainTextToken,
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login correcto',
+            'token' => $token,
             'user' => $user
-        ];
+        ], 200);
+    }
+
+    public function me(Request $request)
+    {
+        return $request->user()->load('rol');
     }
 
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();
-        return ['message' => 'Sesión cerrada'];
-    }
 
-    public function me(Request $request)
-    {
-        return $request->user();
+        return response()->json(['message' => 'Sesión cerrada correctamente']);
     }
 }
-
